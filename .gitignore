@@ -1,0 +1,20 @@
+config/local.yaml
+
+# Local environment/config overrides
+.env
+.env.*
+*.local.yaml
+*.local.yml
+!config/local.example.yaml
+
+# Build/test outputs
+bin/
+dist/
+coverage.out
+*.test
+
+# Logs and editor/OS files
+*.log
+.DS_Store
+.idea/
+.vscode/
