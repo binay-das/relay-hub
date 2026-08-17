@@ -103,7 +103,7 @@ func handleSendReq(w http.ResponseWriter, r *http.Request) {
 
 	client := &http.Client{}
 
-	_, err = client.Do(req)
+	response, err := client.Do(req)
 
 	if err != nil {
 		lib.WriteJson(w, http.StatusBadGateway, map[string]any{
@@ -112,4 +112,53 @@ func handleSendReq(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	respBytes, err := io.ReadAll(io.LimitReader(response.Body, 5_000_000))
+
+	if err != nil {
+		lib.WriteJson(w, http.StatusBadGateway, map[string]any{
+			"error":   true,
+			"message": "Failed to read response body",
+		})
+		return
+	}
+
+	bodyStr := string(respBytes)
+
+	bodyType := "text"
+
+	contentType := response.Header.Get("Content-Type")
+
+	if strings.Contains(contentType, "application/json") {
+		json.Valid(respBytes)
+		bodyType = "json"
+
+		var parsed any
+
+		if json.Unmarshal(respBytes, &parsed) == nil {
+			if prettyJSON, err := json.MarshalIndent(
+				parsed,
+				"",
+				"  ",
+			); err == nil {
+				bodyStr = string(prettyJSON)
+			}
+		}
+
+	}
+
+	respHeaders := make(map[string]string)
+	for key, values := range response.Header {
+		respHeaders[strings.ToLower(key)] = strings.Join(values, ", ")
+	}
+
+	lib.WriteJson(w, http.StatusOK, map[string]any{
+		"error":       false,
+		"status_code": response.StatusCode,
+		"status_text": http.StatusText(response.StatusCode),
+		"headers":     respHeaders,
+		"body":        bodyStr,
+		"body_type":   bodyType,
+	})
+
 }
