@@ -24,11 +24,7 @@ func main() {
 	http.HandleFunc("/api/request", handleSendReq)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-type", "application/json")
-		res := map[string]string{
-			"msg": "Hi! Server is running, try visiting other sites",
-		}
-		json.NewEncoder(w).Encode(res)
+		http.ServeFile(w, r, "index.html")
 	})
 
 	fmt.Println("Server running at: http://localhost:8080")
@@ -177,3 +173,23 @@ func handleSendReq(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+
+// func handleIndex(w http.ResponseWriter, r *http.Request) {
+// 	http.ServeFile(
+// 		w,
+// 		r,
+// 		"index.html",
+// 	)
+
+// 	if err != nil {
+// 		http.Error(
+// 			w,
+// 			"Failed to render page",
+// 			http.StatusInternalServerError,
+// 		)
+
+// 		log.Println("Template error:", err)
+// 		return
+// 	}
+
+// }
