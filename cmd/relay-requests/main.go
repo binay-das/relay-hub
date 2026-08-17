@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -76,6 +77,38 @@ func handleSendReq(w http.ResponseWriter, r *http.Request) {
 		lib.WriteJson(w, http.StatusBadRequest, map[string]any{
 			"error":   true,
 			"message": "URL must start with http:// or https://",
+		})
+		return
+	}
+
+	// outgoing req body
+
+	var body io.Reader
+
+	if payload.Body != "" && (method == "POST" || method == "PUT" || method == "PATCH") {
+		body = strings.NewReader(payload.Body)
+	}
+
+	// create outgoing request
+
+	req, err := http.NewRequest(method, rawURL, body)
+
+	if err != nil {
+		lib.WriteJson(w, http.StatusBadRequest, map[string]any{
+			"error":   true,
+			"message": "Invalid URL: " + err.Error(),
+		})
+		return
+	}
+
+	client := &http.Client{}
+
+	_, err = client.Do(req)
+
+	if err != nil {
+		lib.WriteJson(w, http.StatusBadGateway, map[string]any{
+			"error":   true,
+			"message": "Error",
 		})
 		return
 	}
