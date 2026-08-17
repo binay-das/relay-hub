@@ -20,6 +20,8 @@ var allowedMethods = map[string]bool{
 }
 
 func main() {
+	http.HandleFunc("/api/request", handleSendReq)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "application/json")
 		res := map[string]string{
@@ -38,6 +40,9 @@ func main() {
 }
 
 func handleSendReq(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1_000_000)
+	defer r.Body.Close()
+
 	var payload types.ReqPayLoad
 
 	err := json.NewDecoder(r.Body).Decode(&payload)
