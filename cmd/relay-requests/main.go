@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/binay-das/relay-hub/internal/lib"
 	"github.com/binay-das/relay-hub/internal/types"
@@ -106,18 +107,26 @@ func handleSendReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
 
+	start := time.Now()
 	response, err := client.Do(req)
+	elapsedMs := float64(time.Since(start).Microseconds()) / 1000
 
 	if err != nil {
 		lib.WriteJson(w, http.StatusBadGateway, map[string]any{
-			"error":   true,
-			"message": "Error",
+			"error":      true,
+			"message":    "Connection error: " + err.Error(),
+			"elapsed_ms": elapsedMs,
 		})
 		return
 	}
 
+	defer response.Body.Close()
+
+	// read response body
 	respBytes, err := io.ReadAll(io.LimitReader(response.Body, 5_000_000))
 
 	if err != nil {
@@ -161,6 +170,7 @@ func handleSendReq(w http.ResponseWriter, r *http.Request) {
 		"error":       false,
 		"status_code": response.StatusCode,
 		"status_text": http.StatusText(response.StatusCode),
+		"elapsed_ms":  elapsedMs,
 		"headers":     respHeaders,
 		"body":        bodyStr,
 		"body_type":   bodyType,
