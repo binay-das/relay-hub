@@ -22,8 +22,24 @@ func main() {
 	defer db.Close()
 
 	fmt.Println("Database connected!")
+	if err := database.Migrate(db); err != nil {
+		fmt.Println("Database migration failed:", err)
+		return
+	}
+	fmt.Println("Database migrated!")
 
-	http.HandleFunc("/api/request", handler.HandleSendReq)
+	app := handler.NewApp(db)
+
+	http.HandleFunc("/api/auth/register", app.HandleRegister)
+	http.HandleFunc("/api/auth/login", app.HandleLogin)
+	http.HandleFunc("/api/auth/logout", app.HandleLogout)
+	http.HandleFunc("/api/auth/me", app.HandleMe)
+	http.HandleFunc("/api/request", app.HandleSendReq)
+	http.HandleFunc("/api/collections", app.HandleCollections)
+	http.HandleFunc("/api/saved-requests/", app.HandleSavedRequestByID)
+	http.HandleFunc("/api/saved-requests", app.HandleSavedRequests)
+	http.HandleFunc("/api/history/", app.HandleHistoryByID)
+	http.HandleFunc("/api/history", app.HandleHistory)
 	http.HandleFunc("/", handler.ServeIndex)
 
 	fmt.Printf("Server running at: http://localhost%s\n", config.DefaultPort)
