@@ -77,10 +77,73 @@ button {
 .send:hover {
     background: #5879ed !important;
 }
+.save {
+    background: #20242d !important;
+    color: #9bb1d8;
+}
+.save:hover {
+    background: #292e3a !important;
+}
+.account {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #91a3c5;
+}
+.auth {
+    height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+}
+.auth-panel {
+    width: min(420px, 100%);
+    border: 1px solid #292d35;
+    background: #101216;
+    border-radius: 8px;
+    padding: 22px;
+}
+.auth-brand {
+    margin-bottom: 18px;
+    font-size: 26px;
+    font-weight: 750;
+    color: #fff;
+}
+.auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.auth-panel input {
+    width: 100%;
+    height: 44px;
+    margin-bottom: 10px;
+    border: 1px solid #292d35;
+    background: #1b1e24;
+    border-radius: 8px;
+    padding: 0 13px;
+    outline: none;
+}
+.auth-panel input:focus {
+    border-color: #5875bd;
+}
+.auth-panel .send {
+    width: 100%;
+    height: 44px;
+    border-radius: 8px;
+    border: 1px solid #6688ff;
+}
+.auth-error {
+    min-height: 20px;
+    margin-top: 10px;
+    color: #ef7777;
+}
 .workspace {
     flex: 1;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 280px 1fr 1fr;
     min-height: 0;
 }
 .pane {
@@ -90,6 +153,78 @@ button {
 }
 .left {
     border-right: 1px solid #292d35;
+}
+.sidebar {
+    border-right: 1px solid #292d35;
+    background: #101216;
+}
+.sidebar-section {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.sidebar-section:first-child {
+    height: 48%;
+    border-bottom: 1px solid #292d35;
+}
+.sidebar-actions {
+    display: flex;
+    gap: 8px;
+}
+.icon-btn {
+    height: 32px;
+    min-width: 32px;
+    border: 1px solid #292d35;
+    background: #1b1e24;
+    border-radius: 7px;
+    color: #9bb1d8;
+}
+.sidebar-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px;
+}
+.list-item {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #cbd5e1;
+    padding: 10px;
+    border-radius: 7px;
+    text-align: left;
+}
+.list-item:hover {
+    background: #1b1e24;
+}
+.item-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-weight: 650;
+}
+.method-chip {
+    flex: 0 0 auto;
+    min-width: 48px;
+    color: #78a0ff;
+    font-size: 11px;
+    letter-spacing: .04em;
+}
+.item-name, .item-url {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.item-url {
+    margin-top: 4px;
+    color: #667085;
+    font-size: 12px;
+}
+.sidebar-empty {
+    padding: 18px 10px;
+    color: #63708a;
+    font-size: 13px;
 }
 .pane-head {
     height: 60px;
@@ -233,6 +368,11 @@ button {
     .workspace {
         grid-template-columns: 1fr;
     }
+    .sidebar {
+        height: 260px;
+        border-right: 0;
+        border-bottom: 1px solid #292d35;
+    }
     .left {
         display: none;
     }
@@ -243,7 +383,20 @@ button {
 </style>
 </head>
 <body>
-<div class="app">
+<div id="authView" class="auth">
+    <form class="auth-panel" onsubmit="submitAuth(event)">
+        <div class="auth-brand">RelayHub</div>
+        <div class="auth-tabs">
+            <button id="loginTab" type="button" class="tab active" onclick="setAuthMode('login')">Login</button>
+            <button id="registerTab" type="button" class="tab" onclick="setAuthMode('register')">Register</button>
+        </div>
+        <input id="authEmail" type="email" autocomplete="email" placeholder="Email" required>
+        <input id="authPassword" type="password" autocomplete="current-password" placeholder="Password" required>
+        <button id="authSubmit" class="send" type="submit">Login</button>
+        <div id="authError" class="auth-error"></div>
+    </form>
+</div>
+<div id="appView" class="app hidden">
     <div class="top">
         <div class="logo">RelayHub</div>
         <select id="method">
@@ -254,9 +407,31 @@ button {
             <option>DELETE</option>
         </select>
         <input id="url" value="" placeholder="Enter request URL...">
+        <button class="save" onclick="saveRequest()">Save</button>
         <button class="send" onclick="sendRequest()">Send</button>
+        <span id="accountEmail" class="account"></span>
+        <button class="save" onclick="logout()">Logout</button>
     </div>
     <div class="workspace">
+        <aside class="pane sidebar">
+            <section class="sidebar-section">
+                <div class="pane-head">
+                    <span>SAVED</span>
+                    <div class="sidebar-actions">
+                        <button class="icon-btn" onclick="createCollection()" title="New collection">+</button>
+                        <button class="icon-btn" onclick="loadData()" title="Refresh">↻</button>
+                    </div>
+                </div>
+                <div id="savedList" class="sidebar-list"></div>
+            </section>
+            <section class="sidebar-section">
+                <div class="pane-head">
+                    <span>HISTORY</span>
+                    <button class="icon-btn" onclick="clearHistory()" title="Clear history">×</button>
+                </div>
+                <div id="historyList" class="sidebar-list"></div>
+            </section>
+        </aside>
         <section class="pane left">
             <div class="pane-head">
                 <span>REQUEST</span>
@@ -299,12 +474,114 @@ button {
 </div>
 <script>
 const $ = id => document.getElementById(id);
+const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+}[char]));
+const tokenKey = "relayhub:token";
+const accountKey = "relayhub:account";
+let authMode = "login";
+let currentAccount = null;
+function authToken() {
+    return localStorage.getItem(tokenKey) || "";
+}
+function apiFetch(url, options = {}) {
+    const token = authToken();
+    if (!token) {
+        showAuth();
+        throw new Error("Login first");
+    }
+    return fetch(url, {
+        ...options,
+        headers: {
+            ...(options.headers || {}),
+            "Authorization": `Bearer ${token}`
+        }
+    });
+}
+function setAuthMode(mode) {
+    authMode = mode;
+    $("loginTab").classList.toggle("active", mode === "login");
+    $("registerTab").classList.toggle("active", mode === "register");
+    $("authSubmit").textContent = mode === "login" ? "Login" : "Create account";
+    $("authPassword").autocomplete = mode === "login" ? "current-password" : "new-password";
+    $("authError").textContent = "";
+}
+function showAuth(message = "") {
+    $("authView").classList.remove("hidden");
+    $("appView").classList.add("hidden");
+    $("authError").textContent = message;
+}
+function showApp(user) {
+    currentAccount = user;
+    localStorage.setItem(accountKey, JSON.stringify(user));
+    $("accountEmail").textContent = user.email;
+    $("authView").classList.add("hidden");
+    $("appView").classList.remove("hidden");
+    loadData();
+}
+async function submitAuth(event) {
+    event.preventDefault();
+    $("authError").textContent = "";
+    const email = $("authEmail").value.trim().toLowerCase();
+    const password = $("authPassword").value;
+    const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
+    try {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({email, password})
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Authentication failed");
+        }
+        localStorage.setItem(tokenKey, data.token);
+        showApp(data.user);
+    } catch (error) {
+        $("authError").textContent = error.message;
+    }
+}
+async function restoreSession() {
+    const token = authToken();
+    if (!token) {
+        showAuth();
+        return;
+    }
+    try {
+        const response = await apiFetch("/api/auth/me");
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Session expired");
+        }
+        showApp(data.user);
+    } catch (error) {
+        localStorage.removeItem(tokenKey);
+        localStorage.removeItem(accountKey);
+        showAuth(error.message);
+    }
+}
+async function logout() {
+    try {
+        if (authToken()) {
+            await apiFetch("/api/auth/logout", {method: "POST"});
+        }
+    } finally {
+        localStorage.removeItem(tokenKey);
+        localStorage.removeItem(accountKey);
+        currentAccount = null;
+        showAuth();
+    }
+}
 function addHeader(key = "", value = "") {
     const row = document.createElement("div");
     row.className = "header-row";
     row.innerHTML = `
-        <input class="hk" placeholder="Header name" value="${key}">
-        <input class="hv" placeholder="Value" value="${value}">
+        <input class="hk" placeholder="Header name" value="${escapeHTML(key)}">
+        <input class="hv" placeholder="Value" value="${escapeHTML(value)}">
         <button class="remove" onclick="this.parentElement.remove()">Remove</button>
     `;
     $("headerList").appendChild(row);
@@ -322,7 +599,7 @@ function responseTab(tab, btn) {
     document.querySelectorAll(".response .tab").forEach(x => x.classList.remove("active"));
     btn.classList.add("active");
 }
-async function sendRequest() {
+function collectRequest() {
     const method = $("method").value;
     const url = $("url").value.trim();
     const body = $("body").value;
@@ -334,6 +611,132 @@ async function sendRequest() {
             headers[key] = value;
         }
     });
+    return {method, url, headers, body};
+}
+function applyRequest(request) {
+    $("method").value = request.method || "GET";
+    $("url").value = request.url || "";
+    $("body").value = request.body || request.request_body || "";
+    $("headerList").innerHTML = "";
+    const headers = request.headers || {};
+    const entries = Object.entries(headers);
+    if (!entries.length) {
+        addHeader();
+        return;
+    }
+    entries.forEach(([key, value]) => addHeader(key, value));
+}
+async function loadData() {
+    await Promise.all([loadSavedRequests(), loadHistory()]);
+}
+async function loadSavedRequests() {
+    const list = $("savedList");
+    list.innerHTML = `<div class="sidebar-empty">Loading saved requests...</div>`;
+    try {
+        const response = await apiFetch("/api/saved-requests");
+        const data = await response.json();
+        const requests = data.requests || [];
+        if (!requests.length) {
+            list.innerHTML = `<div class="sidebar-empty">No saved requests yet</div>`;
+            return;
+        }
+        list.innerHTML = requests.map(request => `
+            <button class="list-item" onclick='applyRequest(${escapeHTML(JSON.stringify(request))})'>
+                <div class="item-title">
+                    <span class="method-chip">${escapeHTML(request.method)}</span>
+                    <span class="item-name">${escapeHTML(request.name)}</span>
+                </div>
+                <div class="item-url">${escapeHTML(request.url)}</div>
+            </button>
+        `).join("");
+    } catch (error) {
+        list.innerHTML = `<div class="sidebar-empty">${escapeHTML(error.message)}</div>`;
+    }
+}
+async function loadHistory() {
+    const list = $("historyList");
+    list.innerHTML = `<div class="sidebar-empty">Loading history...</div>`;
+    try {
+        const response = await apiFetch("/api/history?limit=30");
+        const data = await response.json();
+        const history = data.history || [];
+        if (!history.length) {
+            list.innerHTML = `<div class="sidebar-empty">No requests sent yet</div>`;
+            return;
+        }
+        list.innerHTML = history.map(entry => `
+            <button class="list-item" onclick='applyRequest(${escapeHTML(JSON.stringify(entry))})'>
+                <div class="item-title">
+                    <span class="method-chip">${escapeHTML(entry.method)}</span>
+                    <span class="item-name">${entry.error ? "Error" : escapeHTML(entry.status_code)}</span>
+                </div>
+                <div class="item-url">${escapeHTML(entry.url)}</div>
+            </button>
+        `).join("");
+    } catch (error) {
+        list.innerHTML = `<div class="sidebar-empty">${escapeHTML(error.message)}</div>`;
+    }
+}
+
+async function saveRequest() {
+    const request = collectRequest();
+    if (!request.url) {
+        $("responseStatus").textContent = "Enter a URL";
+        return;
+    }
+    const fallbackName = `${request.method} ${request.url}`;
+    const name = prompt("Save request as", fallbackName);
+    if (!name) return;
+    try {
+        const response = await apiFetch("/api/saved-requests", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({...request, name})
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to save request");
+        }
+        $("responseStatus").innerHTML = `<span class="ok">Saved</span>`;
+        await loadSavedRequests();
+    } catch (error) {
+        $("responseStatus").innerHTML = `<span style='color:#ef7777'>${escapeHTML(error.message)}</span>`;
+    }
+}
+
+async function createCollection() {
+    const name = prompt("Collection name");
+    if (!name) return;
+    try {
+        const response = await apiFetch("/api/collections", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({name})
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to create collection");
+        }
+        $("responseStatus").innerHTML = `<span class="ok">Collection created</span>`;
+    } catch (error) {
+        $("responseStatus").innerHTML = `<span style='color:#ef7777'>${escapeHTML(error.message)}</span>`;
+    }
+}
+
+async function clearHistory() {
+    try {
+        const response = await apiFetch("/api/history", {method: "DELETE"});
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to clear history");
+        }
+        await loadHistory();
+    } catch (error) {
+        $("responseStatus").innerHTML = `<span style='color:#ef7777'>${escapeHTML(error.message)}</span>`;
+    }
+}
+async function sendRequest() {
+    const {method, url, headers, body} = collectRequest();
     if (!url) {
         $("responseStatus").textContent = "Enter a URL";
         return;
@@ -343,7 +746,7 @@ async function sendRequest() {
     $("output").textContent = "Sending...";
     $("responseStatus").textContent = "";
     try {
-        const response = await fetch("/api/request", {
+        const response = await apiFetch("/api/request", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -354,6 +757,7 @@ async function sendRequest() {
         $("output").textContent = data.body || data.message || "";
         $("outputHeaders").textContent =data.headers? Object.entries(data.headers).map(([key, value]) => `${key}: ${value}`).join("\n"): "";
         $("responseStatus").innerHTML =data.error? "<span style='color:#ef7777'>Error</span>" : `<span class="ok">${data.status_code} ${data.status_text}</span> · ${data.elapsed_ms ?? "-"} ms`;
+        await loadHistory();
     } catch (error) {
         $("output").textContent = error.message;
         $("responseStatus").innerHTML = "<span style='color:#ef7777'>Connection Error</span>";
@@ -362,6 +766,7 @@ async function sendRequest() {
 document.addEventListener("keydown", event => {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter") sendRequest();
 });
+restoreSession();
 </script>
 </body>
 </html>
